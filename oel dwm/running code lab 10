@@ -1,0 +1,78 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+# Optional for visualization
+from sklearn.tree import plot_tree
+import matplotlib.pyplot as plt
+
+# Make sure the CSV file is in the same directory as the notebook, or provide the full path
+file_path = 'StudentPerformance_cleaned.csv'
+try:
+  df = pd.read_csv(file_path)
+  df['PassedMath'] = (df['MathScore'] >= 50).astype(int) #1 pass
+  print("DataFrame with target variable 'PassedMath':")
+  print(df.head())
+
+
+  # Features: Exclude Original_MathScore and MathScore_scaled (if target is derived from it)
+  # We use other scores and demographic data to predict passing Math.
+  feature_columns = ['ReadingScore', 'WritingScore', 'Gender_male',
+                    'LunchType_standard', 'TestPrepCourse_none', 'TestPrepCourse_not completed']
+  X = df[feature_columns]
+  y = df['PassedMath']
+  print("\nFeatures (X) head:")
+  print(X.head())
+  print("\nTarget (y) head:")
+  print(y.head())
+  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+  # stratify=y is good for classification to maintain class proportion in splits
+  print(f"\nShape of X_train: {X_train.shape}, Shape of y_train: {y_train.shape}")
+  print(f"Shape of X_test: {X_test.shape}, Shape of y_test: {y_test.shape}")
+
+  # Initialize the Decision Tree Classifier
+  # Common parameters:
+  # - criterion: "gini" (default) or "entropy"
+  # - max_depth: Maximum depth of the tree (to prevent overfitting)
+  # - min_samples_split: Minimum number of samples required to split an internal node
+  # - min_samples_leaf: Minimum number of samples required to be at a leaf node
+  dt_model = DecisionTreeClassifier(max_depth=5, random_state=42)
+
+  # Train the model
+  dt_model.fit(X_train, y_train)
+  print("\nDecision Tree model trained.")
+  y_pred = dt_model.predict(X_test)
+  print("\nPredictions made on the test set.")
+  accuracy = accuracy_score(y_test, y_pred)
+  conf_matrix = confusion_matrix(y_test, y_pred)
+  class_report = classification_report(y_test, y_pred)
+
+  print(f"\nAccuracy: {accuracy:.4f}")
+  print("\nConfusion Matrix:")
+  print(conf_matrix)
+  # For better display of confusion matrix:
+  import seaborn as sns
+  sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Fail', 'Pass'], yticklabels=['Fail', 'Pass'])
+  plt.xlabel('Predicted')
+  plt.ylabel('Actual')
+  plt.title('Confusion Matrix')
+  plt.show()
+  # [Image: Seaborn Confusion Matrix plot]
+
+  print("\nClassification Report:")
+  print(class_report)
+
+
+  plt.figure(figsize=(20,10)) # Adjust figure size
+  plot_tree(dt_model,
+           feature_names=feature_columns,
+           class_names=['Fail (0)', 'Pass (1)'], #Ensure order matches class labels
+           filled=True,
+           rounded=True,
+           fontsize=10)
+  plt.title("Decision Tree for Math Performance")
+  plt.show()
+
+except FileNotFoundError:
+    print(f"Error: File not found at {file_path}")
+    # Exit or handle error appropriately
